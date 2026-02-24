@@ -1,0 +1,383 @@
+<!DOCTYPE html><html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aplikasi Zakat Fitrah</title><style>
+body{font-family: Arial, sans-serif;background:#f4f6f8;margin:0;padding:20px;}
+h1{text-align:center;margin-bottom:20px;}
+.card{background:white;padding:18px;margin-bottom:18px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);max-width:520px;margin-left:auto;margin-right:auto;} 
+input, select, button, textarea{width:100%;padding:12px;margin-top:10px;border-radius:10px;border:1px solid #ccc;font-size:16px;box-sizing:border-box;}
+button{background:#2e7d32;color:white;border:none;font-weight:bold;cursor:pointer;}
+button:hover{background:#1b5e20;}
+.danger{background:#c62828;}
+.danger:hover{background:#8e0000;}
+.table{width:100%;margin-top:12px;border-collapse:collapse;}
+.table th, .table td{border:1px solid #e0e0e0;padding:10px;text-align:center;font-size:14px;}
+.summary{font-size:17px;font-weight:bold;white-space:pre-line;line-height:1.6;text-align:left;}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);padding:20px;box-sizing:border-box;} 
+.modal-content{background:white;margin:auto;padding:20px;width:100%;max-width:520px;border-radius:14px;max-height:85vh;overflow:auto;}
+.hidden{display:none;}
+.flex{display:flex;gap:10px;}
+.flex input{margin-top:0;}
+.suggestions{
+  position:absolute;
+  top:100%;
+  left:0;
+  right:0;
+  background:white;
+  border:1px solid #ccc;
+  border-radius:8px;
+  max-height:150px;
+  overflow:auto;
+  z-index:1000;
+}
+
+.suggestion-item{
+  padding:10px;
+  cursor:pointer;
+}
+
+.suggestion-item:hover{
+  background:#f0f0f0;
+}
+</style></head>
+<body><h1>Aplikasi Zakat Fitrah</h1><!-- TOMBOL TAMPILKAN PANEL DATA KK --><div class="card">
+<button onclick="togglePanelKK()">⚙️ Input Data KK Wajib Zakat</button>
+</div><!-- DATA KK --><div class="card hidden" id="panelKK">
+<h3>Data KK Wajib Zakat</h3>
+<div class="flex">
+  <textarea id="bulkKK" placeholder="Format:
+Ahmad,4
+Budi,3
+Siti,5"></textarea>
+</div>
+<button onclick="tambahKK()">Tambah KK</button><table class="table" id="tabelKK"></table>
+<button class="danger" onclick="hapusSemuaKK()">
+  🗑 Hapus Semua Data KK
+</button>
+</div><!-- INPUT PENERIMAAN --><div class="card">
+<h3>Penerimaan Zakat</h3>
+<div style="position:relative;">
+  <input id="namaMasuk" placeholder="Ketik nama KK..." oninput="cariNama()" autocomplete="off">
+  <div id="suggestions" class="suggestions"></div>
+</div>
+<input id="jiwaMasuk" type="number" placeholder="Jumlah jiwa" oninput="hitungTotalMasuk()">
+<select id="jenisMasuk" onchange="hitungTotalMasuk()">
+<option value="Beras">Beras</option>
+<option value="Uang">Uang</option>
+</select>
+<input id="totalMasuk" type="text" placeholder="Total otomatis" readonly>
+<button id="btnSimpan">Simpan Penerimaan</button>
+<button id="btnTabel">📋 Tampilkan Data Penerimaan</button>
+<button id="btnBelum">⚠️ Tampilkan Belum Bayar</button>
+<button class="danger" onclick="resetData()">Reset Data penerimaan</button>
+</div><!-- REKAP --><div class="card">
+<h3>Rekap Penerimaan</h3>
+<div class="summary" id="ringkasan"></div>
+</div><!-- MODAL DATA --><div class="modal" id="modalTabel">
+  <div class="modal-content">
+    <h3>Data Penerimaan Zakat</h3>
+    <table class="table" id="tabelMasuk"></table>
+    <br>
+    <button onclick="tutupModal('modalTabel')">Tutup</button>
+  </div>
+</div><!-- MODAL BELUM --><div class="modal" id="modalBelum">
+  <div class="modal-content">
+    <h3>Daftar Belum Bayar</h3>
+    <div id="isiBelum"></div>
+    <br>
+    <button onclick="tutupModal('modalBelum')">Tutup</button>
+  </div>
+</div><script>
+const NAMA_MASJID = "Masjid Nurul Iman";
+const BERAS_PER_JIWA = 2.7;
+const HARGA_BERAS_PER_JIWA = 40000;
+
+let DATA_KK = JSON.parse(localStorage.getItem("DATA_KK")) || [];
+let masuk = JSON.parse(localStorage.getItem("masuk")) || [];
+
+function simpanStorage(){
+  localStorage.setItem("DATA_KK", JSON.stringify(DATA_KK));
+  localStorage.setItem("masuk", JSON.stringify(masuk));
+}
+
+function togglePanelKK(){ panelKK.classList.toggle("hidden"); }
+
+function hapusSemuaKK(){
+
+  const konfirmasi1 = confirm(
+    "PERINGATAN!\n\nSemua DATA KK akan dihapus.\nTransaksi juga akan ikut dihapus.\n\nLanjut?"
+  );
+  if(!konfirmasi1) return;
+
+  const konfirmasi2 = confirm(
+    "Konfirmasi sekali lagi.\nData tidak bisa dikembalikan.\n\nYakin?"
+  );
+  if(!konfirmasi2) return;
+
+  // Kosongkan semua
+  DATA_KK = [];
+  masuk = [];
+
+  // Hapus dari storage
+  localStorage.removeItem("DATA_KK");
+  localStorage.removeItem("masuk");
+
+  // Refresh tampilan
+  tampilkanKK();
+  tampilkanRingkasan();
+  tampilkanTabelMasuk();
+
+  alert("Semua data KK dan transaksi berhasil dihapus.");
+}
+
+function tambahKK(){
+  const input = bulkKK.value.trim();
+  if(!input) return alert("Isi data dulu");
+
+  const lines = input.split("\n");
+
+  lines.forEach(line=>{
+    const [nama, jiwa] = line.split(",");
+    if(!nama || !jiwa) return;
+
+    if(!DATA_KK.some(k=>k.nama.toLowerCase()===nama.trim().toLowerCase())){
+      DATA_KK.push({
+        nama: nama.trim(),
+        jiwa: Number(jiwa)
+      });
+    }
+  });
+
+  bulkKK.value="";
+  simpanStorage();
+  tampilkanKK();
+
+
+  if(DATA_KK.some(k=>k.nama.toLowerCase()===nama.toLowerCase()))
+    return alert("Nama KK sudah ada");
+
+  
+}
+
+function tampilkanKK(){
+  tabelKK.innerHTML = "<tr><th>Nama KK</th><th>Jiwa</th><th>Aksi</th></tr>";
+
+  DATA_KK.forEach((k,index)=>{
+    tabelKK.innerHTML += `
+      <tr>
+        <td>${k.nama}</td>
+        <td>${k.jiwa}</td>
+        <td>
+          <button class="danger" onclick="hapusKK(${index})">Hapus</button>
+        </td>
+      </tr>`;
+  });
+}
+
+function cariNama(){
+  const keyword = namaMasuk.value.toLowerCase();
+  suggestions.innerHTML = "";
+
+  if(!keyword) return;
+
+  const hasil = DATA_KK
+    .filter(k => k.nama.toLowerCase().includes(keyword))
+    .slice(0,3); // 🔥 batasi hanya 3
+
+  hasil.forEach(k=>{
+    const div = document.createElement("div");
+    div.className = "suggestion-item";
+    div.textContent = k.nama;
+    div.onclick = function(){
+      namaMasuk.value = k.nama;
+      jiwaMasuk.value = k.jiwa;
+      hitungTotalMasuk();
+      suggestions.innerHTML = "";
+    };
+    suggestions.appendChild(div);
+  });
+}
+
+function isiDropdownNama(){
+  namaMasuk.innerHTML = "<option value=''>Pilih Nama KK</option>";
+  DATA_KK.forEach(k=>{
+    namaMasuk.innerHTML += `<option value='${k.nama}'>${k.nama}</option>`;
+  });
+}
+function cariNamaMirip(inputNama){
+  const keyword = inputNama.toLowerCase();
+
+  return DATA_KK.filter(k=>{
+    const nama = k.nama.toLowerCase();
+    return nama.includes(keyword) || keyword.includes(nama);
+  }).slice(0,3);
+}
+
+function isiJiwaOtomatis(){
+  const data = DATA_KK.find(k=>k.nama===namaMasuk.value);
+  if(data){ jiwaMasuk.value = data.jiwa; hitungTotalMasuk(); }
+}
+
+
+function hitungTotalMasuk(){
+  const jiwa = Number(jiwaMasuk.value||0);
+  if(jenisMasuk.value === "Beras") totalMasuk.value = (jiwa*BERAS_PER_JIWA)+" kg";
+  else totalMasuk.value = "Rp "+(jiwa*HARGA_BERAS_PER_JIWA).toLocaleString();
+}
+
+function tambahMasuk(){
+  const nama = namaMasuk.value.trim();
+  const jiwa = Number(jiwaMasuk.value);
+  const jenis = jenisMasuk.value;
+
+  if(!nama || !jiwa) return alert("Data belum lengkap");
+
+  // 🔥 CEK: Jika nama belum ada di DATA_KK → tambahkan otomatis
+  let dataKK = DATA_KK.find(k=>k.nama.toLowerCase()===nama.toLowerCase());
+
+if(!dataKK){
+
+  const lanjut = confirm("Nama tidak ditemukan.\nTambah sebagai KK baru?");
+  if(!lanjut) return;
+
+  DATA_KK.push({ nama: nama, jiwa: jiwa });
+
+}else{
+
+  if(dataKK.jiwa !== jiwa){
+
+    const update = confirm(
+      "Jumlah jiwa berubah dari "+dataKK.jiwa+" menjadi "+jiwa+".\nUpdate data KK?"
+    );
+
+    if(update){
+      dataKK.jiwa = jiwa; // 🔥 INI WAJIB ADA
+    }
+  }
+}
+
+// WAJIB simpan setelah update
+simpanStorage();
+tampilkanKK();
+
+  // Cegah dobel bayar
+  if(masuk.some(m=>m.nama.toLowerCase()===nama.toLowerCase()))
+    return alert("Sudah tercatat bayar");
+
+  masuk.push({
+  nama,
+  jenis
+});
+
+  namaMasuk.value="";
+  jiwaMasuk.value="";
+  totalMasuk.value="";
+  suggestions.innerHTML="";
+
+  simpanStorage();
+  tampilkanRingkasan();
+}
+
+function tampilkanRingkasan(){
+
+  const totalKK = masuk.length;
+
+  let totalJiwa = 0;
+  let totalBeras = 0;
+  let totalUang = 0;
+
+  masuk.forEach(m=>{
+    const dataKK = DATA_KK.find(k=>k.nama.toLowerCase()===m.nama.toLowerCase());
+    const jiwa = dataKK ? dataKK.jiwa : 0;
+
+    totalJiwa += jiwa;
+
+    if(m.jenis==="Beras") totalBeras += jiwa*BERAS_PER_JIWA;
+    if(m.jenis==="Uang") totalUang += jiwa*HARGA_BERAS_PER_JIWA;
+  });
+
+  ringkasan.textContent =
+    `${NAMA_MASJID}\n\n`+
+    `KK Bayar: ${totalKK}\n`+
+    `Total Jiwa: ${totalJiwa}\n`+
+    `Total Beras: ${totalBeras} kg\n`+
+    `Total Uang: Rp ${totalUang.toLocaleString()}`;
+}
+
+function tampilkanTabelMasuk(){
+  tabelMasuk.innerHTML = "<tr><th>Nama</th><th>Jiwa</th><th>Jenis</th><th>Beras</th><th>Uang</th></tr>";
+
+  masuk.forEach(m=>{
+
+    const dataKK = DATA_KK.find(k=>k.nama.toLowerCase()===m.nama.toLowerCase());
+    const jiwa = dataKK ? dataKK.jiwa : 0;
+
+    const beras = m.jenis==="Beras" ? jiwa*BERAS_PER_JIWA : 0;
+    const uang = m.jenis==="Uang" ? jiwa*HARGA_BERAS_PER_JIWA : 0;
+
+    tabelMasuk.innerHTML += `
+      <tr>
+        <td>${m.nama}</td>
+        <td>${jiwa}</td>
+        <td>${m.jenis}</td>
+        <td>${beras || '-'}</td>
+        <td>${uang ? 'Rp '+uang.toLocaleString() : '-'}</td>
+      </tr>`;
+  });
+}
+
+function hapusKK(index){
+
+  const nama = DATA_KK[index].nama;
+
+  // Cek apakah sudah tercatat bayar
+  const sudahBayar = masuk.some(m=>m.nama.toLowerCase()===nama.toLowerCase());
+
+  if(sudahBayar){
+    const lanjut = confirm(
+      "Nama ini sudah tercatat dalam penerimaan.\n\nJika dihapus, data penerimaan tetap ada.\n\nLanjut hapus?"
+    );
+    if(!lanjut) return;
+  } else {
+    if(!confirm("Yakin ingin menghapus KK ini?")) return;
+  }
+
+  DATA_KK.splice(index,1);
+  simpanStorage();
+  tampilkanKK();
+}
+function bukaModalTabel(){ tampilkanTabelMasuk(); modalTabel.style.display='block'; }
+
+function bukaModalBelum(){
+  const sudah = masuk.map(m=>m.nama);
+  const belum = DATA_KK.filter(k=>!sudah.includes(k.nama)).map(k=>k.nama);
+  isiBelum.innerHTML = belum.length? belum.join('<br>') : 'Semua sudah bayar';
+  modalBelum.style.display='block';
+}
+
+function tutupModal(id){ document.getElementById(id).style.display='none'; }
+
+function resetData(){
+  if(!confirm("Yakin reset data penerimaan saja?")) return;
+
+  // Hapus hanya data penerimaan
+  masuk = [];
+  localStorage.removeItem("masuk");
+
+  // Reset tampilan
+  tampilkanRingkasan();
+  tampilkanTabelMasuk();
+
+  alert("Data penerimaan berhasil direset.\nData KK tetap aman.");
+}
+  
+document.getElementById('btnSimpan').addEventListener('click', tambahMasuk);
+document.getElementById('btnTabel').addEventListener('click', bukaModalTabel);
+document.getElementById('btnBelum').addEventListener('click', bukaModalBelum);
+
+tampilkanKK();
+isiDropdownNama();
+tampilkanRingkasan();
+</script></body>
+</html>
