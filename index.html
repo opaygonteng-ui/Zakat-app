@@ -74,6 +74,7 @@ Siti,5"></textarea>
 </div><!-- REKAP --><div class="card">
 <h3>Rekap Penerimaan</h3>
 <div class="summary" id="ringkasan"></div>
+<button onclick="exportExcel()">📥 Export ke Excel</button>
 </div><!-- MODAL DATA --><div class="modal" id="modalTabel">
   <div class="modal-content">
     <h3>Data Penerimaan Zakat</h3>
@@ -88,6 +89,8 @@ Siti,5"></textarea>
     <br>
     <button onclick="tutupModal('modalBelum')">Tutup</button>
   </div>
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 </div><script>
 const NAMA_MASJID = "Masjid Nurul Iman";
 const BERAS_PER_JIWA = 2.7;
@@ -376,8 +379,48 @@ document.getElementById('btnSimpan').addEventListener('click', tambahMasuk);
 document.getElementById('btnTabel').addEventListener('click', bukaModalTabel);
 document.getElementById('btnBelum').addEventListener('click', bukaModalBelum);
 
+function exportExcel(){
+
+  if(DATA_KK.length === 0){
+    alert("Tidak ada data untuk diexport.");
+    return;
+  }
+
+  // Sheet 1: DATA KK
+  const sheetKK = DATA_KK.map(k => ({
+    "Nama KK": k.nama,
+    "Jumlah Jiwa": k.jiwa
+  }));
+
+  // Sheet 2: DATA PENERIMAAN (dinamis fleksibel)
+  const sheetMasuk = masuk.map(m => {
+
+    const dataKK = DATA_KK.find(k=>k.nama.toLowerCase()===m.nama.toLowerCase());
+    const jiwa = dataKK ? dataKK.jiwa : 0;
+
+    return {
+      "Nama": m.nama,
+      "Jenis": m.jenis,
+      "Jumlah Jiwa": jiwa,
+      "Total Beras (kg)": m.jenis==="Beras" ? jiwa*BERAS_PER_JIWA : "",
+      "Total Uang": m.jenis==="Uang" ? jiwa*HARGA_BERAS_PER_JIWA : ""
+    };
+  });
+
+  // Buat workbook
+  const wb = XLSX.utils.book_new();
+
+  const ws1 = XLSX.utils.json_to_sheet(sheetKK);
+  const ws2 = XLSX.utils.json_to_sheet(sheetMasuk);
+
+  XLSX.utils.book_append_sheet(wb, ws1, "Data_KK");
+  XLSX.utils.book_append_sheet(wb, ws2, "Penerimaan");
+
+  XLSX.writeFile(wb, "Data_Zakat.xlsx");
+}
 tampilkanKK();
 isiDropdownNama();
 tampilkanRingkasan();
+
 </script></body>
 </html>
