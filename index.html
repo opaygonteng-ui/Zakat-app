@@ -1,581 +1,978 @@
-<!DOCTYPE html><html lang="id">
+
+<!DOCTYPE html>
+<html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aplikasi Zakat Fitrah</title><style>
-body{font-family: Arial, sans-serif;background:#f4f6f8;margin:0;padding:20px;}
-h1{text-align:center;margin-bottom:20px;}
-.card{background:white;padding:18px;margin-bottom:18px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);max-width:520px;margin-left:auto;margin-right:auto;} 
-input, select, button, textarea{width:100%;padding:12px;margin-top:10px;border-radius:10px;border:1px solid #ccc;font-size:16px;box-sizing:border-box;}
-button{background:#2e7d32;color:white;border:none;font-weight:bold;cursor:pointer;}
-button:hover{background:#1b5e20;}
-.danger{background:#c62828;}
-.danger:hover{background:#8e0000;}
-.table{width:100%;margin-top:12px;border-collapse:collapse;}
-.table th, .table td{border:1px solid #e0e0e0;padding:10px;text-align:center;font-size:14px;}
-.summary{font-size:17px;font-weight:bold;white-space:pre-line;line-height:1.6;text-align:left;}
-.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);padding:20px;box-sizing:border-box;} 
-.modal-content{background:white;margin:auto;padding:20px;width:100%;max-width:520px;border-radius:14px;max-height:85vh;overflow:auto;}
-.hidden{display:none;}
-.flex{display:flex;gap:10px;}
-.flex input{margin-top:0;}
-.suggestions{
-  position:absolute;
-  top:100%;
-  left:0;
-  right:0;
-  background:white;
-  border:1px solid #ccc;
-  border-radius:8px;
-  max-height:150px;
-  overflow:auto;
-  z-index:1000;
-}
+<meta name="theme-color" content="#102d25">
+<title>Zakat Fitrah - Masjid Nurul Iman</title>
 
-.suggestion-item{
-  padding:10px;
-  cursor:pointer;
-}
-
-.suggestion-item:hover{
-  background:#f0f0f0;
-}
-</style></head>
-<body><h1>Aplikasi Zakat Fitrah</h1><!-- TOMBOL TAMPILKAN PANEL DATA KK --><div class="card">
-<button onclick="togglePanelKK()">⚙️ Input Data KK Wajib Zakat</button>
-</div><!-- DATA KK --><div class="card hidden" id="panelKK">
-<h3>Data KK Wajib Zakat</h3>
-<div class="flex">
-  <textarea id="bulkKK" placeholder="Format:
-Ahmad,4
-Budi,3
-Siti,5"></textarea>
-</div>
-<button onclick="tambahKK()">Tambah KK</button><div style="max-height:250px; overflow-y:auto; margin-top:10px;">
-  <table class="table" id="tabelKK"></table>
-</div>
-<button class="danger" onclick="hapusSemuaKK()">
-  🗑 Hapus Semua Data KK
-</button>
-</div><!-- INPUT PENERIMAAN --><div class="card">
-<h3>Penerimaan Zakat</h3>
-<div style="position:relative;">
-  <input id="namaMasuk" placeholder="Ketik nama KK..." oninput="cariNama()" autocomplete="off">
-  <div id="suggestions" class="suggestions"></div>
-</div>
-<input id="jiwaMasuk" type="number" placeholder="Jumlah jiwa" oninput="hitungTotalMasuk()">
-<select id="jenisMasuk" onchange="hitungTotalMasuk()">
-<option value="Beras">Beras</option>
-<option value="Uang">Uang</option>
-</select>
-<input id="totalMasuk" type="text" placeholder="Total otomatis" readonly>
-<button id="btnSimpan">Simpan Penerimaan</button>
-<button id="btnTabel">📋 Tampilkan Data Penerimaan</button>
-<button id="btnBelum">⚠️ Tampilkan Belum Bayar</button>
-<button class="danger" onclick="resetData()">Reset Data penerimaan</button>
-</div><!-- REKAP --><div class="card">
-<h3>Rekap Penerimaan</h3>
-<div class="summary" id="ringkasan"></div>
-<button onclick="exportExcel()">📥 Export ke Excel</button>
-<button onclick="exportPDF()">📄 Export PDF Laporan Resmi</button>
-</div><!-- MODAL DATA --><div class="modal" id="modalTabel">
-  <div class="modal-content">
-    <h3>Data Penerimaan Zakat</h3>
-    <table class="table" id="tabelMasuk"></table>
-    <br>
-    <button onclick="tutupModal('modalTabel')">Tutup</button>
-  </div>
-</div><!-- MODAL BELUM --><div class="modal" id="modalBelum">
-  <div class="modal-content">
-    <h3>Daftar Belum Bayar</h3>
-    <div id="isiBelum"></div>
-    <br>
-    <button onclick="tutupModal('modalBelum')">Tutup</button>
-  </div>
- <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
- 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-</div><script>
-const NAMA_MASJID = "Masjid Nurul Iman";
-const BERAS_PER_JIWA = 2.7;
-const HARGA_BERAS_PER_JIWA = 40000;
 
-let DATA_KK = JSON.parse(localStorage.getItem("DATA_KK")) || [];
-let masuk = JSON.parse(localStorage.getItem("masuk")) || [];
+<style>
+:root{
+ --primary:#176b48;--dark:#102d25;--green:#e8f5ed;
+ --bg:#f3f6f4;--white:#fff;--text:#24352d;
+ --muted:#819087;--border:#e5ebe7;--red:#c53e3e;
+ --orange:#d68a25;--shadow:0 4px 18px rgba(0,0,0,.045);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;padding-bottom:85px}
+header{background:var(--dark);color:white;padding:23px 18px 27px;border-radius:0 0 22px 22px}
+.header-inner{max-width:850px;margin:auto}
+.brand{font-size:21px;font-weight:800}
+.brand span{color:#7ee2a9}
+header p{font-size:12px;color:#b6d1c2;margin:6px 0 0}
+main{max-width:850px;margin:auto;padding:15px}
+.page{display:none}
+.page.active{display:block}
+.card{background:white;border-radius:15px;padding:17px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card h3{font-size:16px;margin:0 0 15px}
+.section-title{display:flex;justify-content:space-between;align-items:center;margin:20px 2px 12px}
+.section-title h3{font-size:15px;margin:0}
+.small{font-size:11px;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:-15px}
+.stat{background:white;padding:15px;border-radius:13px;box-shadow:var(--shadow)}
+.stat label{font-size:11px;color:var(--muted)}
+.stat strong{display:block;font-size:20px;margin-top:8px;color:var(--primary);word-break:break-word}
+.stat .unit{font-size:11px;color:var(--muted)}
+input,select,textarea{width:100%;padding:12px;margin-top:9px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text);font-size:14px;outline:none;font-family:inherit}
+input:focus,select:focus,textarea:focus{border-color:var(--primary)}
+textarea{resize:vertical;min-height:85px}
+label.field-label{display:block;font-size:12px;font-weight:bold;margin-top:12px}
+button{padding:12px;border:0;border-radius:9px;background:var(--primary);color:white;font-weight:bold;font-size:13px;cursor:pointer}
+button:active{opacity:.8}
+.btn-full{width:100%;margin-top:12px}
+.btn-light{background:var(--green);color:var(--primary)}
+.btn-red{background:#ffeded;color:var(--red)}
+.btn-orange{background:#fff4df;color:#a56a12}
+.btn-gray{background:#edf0ee;color:#526157}
+.btn-row{display:flex;gap:8px;margin-top:12px}
+.btn-row button{flex:1}
+.nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--border);display:flex;justify-content:center;z-index:100;padding:7px 2px calc(7px + env(safe-area-inset-bottom))}
+.nav-inner{width:100%;max-width:850px;display:grid;grid-template-columns:repeat(4,1fr)}
+.nav button{background:none;color:#87948b;border-radius:8px;padding:8px 2px;font-size:10px;font-weight:normal}
+.nav button span{display:block;font-size:19px;margin-bottom:4px}
+.nav button.active{color:var(--primary);font-weight:bold}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:440px}
+th,td{padding:11px 9px;text-align:left;border-bottom:1px solid var(--border)}
+th{background:#f5f8f6;color:#617168}
+td{line-height:1.4}
+.badge{display:inline-block;padding:5px 8px;border-radius:20px;font-size:10px;background:var(--green);color:var(--primary)}
+.badge.red{background:#ffeded;color:var(--red)}
+.badge.orange{background:#fff4df;color:#a56a12}
+.empty{text-align:center;color:var(--muted);padding:25px;font-size:12px}
+.searchbox{margin-bottom:12px}
+.suggestions{position:absolute;left:0;right:0;top:100%;background:white;border:1px solid var(--border);border-radius:9px;z-index:10;box-shadow:var(--shadow);max-height:160px;overflow:auto}
+.suggestion{padding:12px;font-size:13px;cursor:pointer}
+.suggestion:hover{background:var(--green)}
+.relative{position:relative}
+.hidden{display:none!important}
+.balance{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.balance-item{padding:14px;background:#f5f8f6;border-radius:11px}
+.balance-item label{font-size:11px;color:var(--muted)}
+.balance-item strong{display:block;font-size:18px;margin-top:7px;overflow-wrap:anywhere}
+.progress{background:#e8eee9;height:7px;border-radius:10px;overflow:hidden;margin-top:10px}
+.progress div{height:100%;background:var(--primary)}
+.note{padding:12px;background:#f3f8f4;border-radius:9px;font-size:11px;color:#62756a;line-height:1.6;margin-top:12px}
+.mustahik-item{padding:14px;background:#f5f8f6;border:1px solid var(--border);border-radius:11px;margin-top:10px}
+.mustahik-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mustahik-head strong{font-size:14px}
+.mustahik-detail{font-size:12px;color:#617168;line-height:1.8;margin-top:10px}
+.allocation{background:#e8f5ed;border-radius:9px;padding:10px;margin-top:9px;font-size:12px;line-height:1.8}
+.allocation-row{display:flex;justify-content:space-between;gap:10px}
+footer{text-align:center;color:#9aa69f;font-size:10px;padding:15px}
+@media(min-width:600px){.stats{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
 
-function simpanStorage(){
-  localStorage.setItem("DATA_KK", JSON.stringify(DATA_KK));
-  localStorage.setItem("masuk", JSON.stringify(masuk));
+<body>
+<header>
+ <div class="header-inner">
+  <div class="brand">ZAKAT <span>FITRAH</span></div>
+  <p>PANITIA ZAKAT FITRAH · MASJID NURUL IMAN</p>
+ </div>
+</header>
+
+<main>
+
+<!-- DASHBOARD -->
+<section class="page active" id="dashboard">
+ <div class="section-title"><h3>Ringkasan Zakat</h3><span class="small">Dashboard</span></div>
+ <div class="stats">
+  <div class="stat"><label>KK Terdaftar</label><strong id="dKK">0</strong><span class="unit">Kepala keluarga</span></div>
+  <div class="stat"><label>KK Membayar</label><strong id="dBayar">0</strong><span class="unit">Kepala keluarga</span></div>
+  <div class="stat"><label>Total Jiwa Bayar</label><strong id="dJiwa">0</strong><span class="unit">Jiwa</span></div>
+  <div class="stat"><label>Belum Membayar</label><strong id="dBelum">0</strong><span class="unit">Kepala keluarga</span></div>
+ </div>
+
+ <div class="section-title"><h3>Saldo Zakat</h3><span class="small">Penerimaan dan pembagian</span></div>
+ <div class="card">
+  <h3>🌾 Saldo Beras</h3>
+  <div class="balance">
+   <div class="balance-item"><label>Diterima</label><strong id="berasMasuk">0 kg</strong></div>
+   <div class="balance-item"><label>Sudah dibagikan</label><strong id="berasKeluar">0 kg</strong></div>
+  </div>
+  <div class="balance-item" style="margin-top:10px;background:#e8f5ed">
+   <label>Sisa beras</label><strong id="berasSisa" style="color:var(--primary)">0 kg</strong>
+  </div>
+ </div>
+ <div class="card">
+  <h3>💵 Saldo Uang</h3>
+  <div class="balance">
+   <div class="balance-item"><label>Diterima</label><strong id="uangMasuk">Rp 0</strong></div>
+   <div class="balance-item"><label>Sudah dibagikan</label><strong id="uangKeluar">Rp 0</strong></div>
+  </div>
+  <div class="balance-item" style="margin-top:10px;background:#e8f5ed">
+   <label>Sisa uang</label><strong id="uangSisa" style="color:var(--primary)">Rp 0</strong>
+  </div>
+ </div>
+ <div class="card">
+  <h3>📊 Progress Pembayaran</h3>
+  <div style="display:flex;justify-content:space-between"><span class="small">KK sudah membayar</span><strong id="persen">0%</strong></div>
+  <div class="progress"><div id="progressBayar" style="width:0%"></div></div>
+  <div class="note">Saldo dihitung berdasarkan penerimaan dikurangi pembagian.</div>
+ </div>
+ <div class="card">
+  <h3>📄 Laporan</h3>
+  <button class="btn-full" onclick="exportExcel()">📥 Export Excel</button>
+  <button class="btn-full btn-light" onclick="exportPDF()">📄 Export PDF</button>
+ </div>
+</section>
+
+<!-- DATA KK -->
+<section class="page" id="dataKK">
+ <div class="section-title"><h3>Data KK Wajib Zakat</h3><span class="small" id="jumlahKK">0 KK</span></div>
+ <div class="card">
+  <h3>Input Banyak KK</h3>
+  <textarea id="bulkKK" placeholder="Contoh:&#10;Ahmad,4&#10;Budi,3&#10;Siti,5"></textarea>
+  <div class="note">Format: Nama KK, jumlah jiwa. Satu keluarga setiap baris.</div>
+  <button class="btn-full" onclick="tambahKK()">+ Tambahkan Data KK</button>
+ </div>
+ <div class="card">
+  <h3>Daftar KK</h3>
+  <input id="searchKK" class="searchbox" placeholder="Cari nama KK..." oninput="renderKK()">
+  <div class="table-wrap"><table>
+   <thead><tr><th>Nama KK</th><th>Jiwa</th><th>Status</th><th>Aksi</th></tr></thead>
+   <tbody id="tabelKK"></tbody>
+  </table></div>
+  <div id="emptyKK" class="empty hidden">Belum ada data KK.</div>
+ </div>
+ <div class="card">
+  <h3>Pengaturan Data</h3>
+  <button class="btn-red btn-full" onclick="hapusSemuaKK()">🗑 Hapus Semua Data KK dan Transaksi</button>
+ </div>
+</section>
+
+<!-- PENERIMAAN -->
+<section class="page" id="penerimaan">
+ <div class="section-title"><h3>Penerimaan Zakat</h3><span class="small">Input pembayaran</span></div>
+ <div class="card">
+  <h3>Tambah Penerimaan</h3>
+  <div class="relative">
+   <label class="field-label">Nama Kepala Keluarga</label>
+   <input id="namaMasuk" placeholder="Ketik nama KK..." autocomplete="off" oninput="cariNama()">
+   <div id="suggestions" class="suggestions hidden"></div>
+  </div>
+  <label class="field-label">Jumlah Jiwa</label>
+  <input id="jiwaMasuk" type="number" min="1" placeholder="Jumlah jiwa">
+  <label class="field-label">Jenis Pembayaran</label>
+  <select id="jenisMasuk" onchange="hitungTotal()">
+   <option value="Beras">Beras</option><option value="Uang">Uang</option>
+  </select>
+  <div class="note">Ketentuan saat ini: Beras 2,7 kg per jiwa. Uang Rp40.000 per jiwa.</div>
+  <label class="field-label">Total Zakat</label>
+  <input id="totalMasuk" readonly placeholder="Total otomatis">
+  <button class="btn-full" onclick="tambahMasuk()">Simpan Penerimaan</button>
+ </div>
+ <div class="card">
+  <h3>Riwayat Penerimaan</h3>
+  <input id="searchMasuk" placeholder="Cari nama..." oninput="renderMasuk()">
+  <div class="table-wrap" style="margin-top:12px"><table>
+   <thead><tr><th>Nama</th><th>Jiwa</th><th>Jenis</th><th>Jumlah</th><th>Aksi</th></tr></thead>
+   <tbody id="tabelMasuk"></tbody>
+  </table></div>
+  <div id="emptyMasuk" class="empty hidden">Belum ada penerimaan.</div>
+  <button class="btn-light btn-full" onclick="lihatBelum()">⚠️ Lihat KK Belum Membayar</button>
+  <button class="btn-red btn-full" onclick="resetPenerimaan()">Reset Penerimaan</button>
+ </div>
+</section>
+
+<!-- PEMBAGIAN -->
+<section class="page" id="pembagian">
+ <div class="section-title"><h3>Pembagian Zakat</h3><span class="small">Distribusi</span></div>
+
+ <div class="card">
+  <h3>📦 Saldo Siap Dibagikan</h3>
+  <div class="balance">
+   <div class="balance-item"><label>Saldo Beras</label><strong id="saldoBerasBagikan">0 kg</strong></div>
+   <div class="balance-item"><label>Saldo Uang</label><strong id="saldoUangBagikan">Rp 0</strong></div>
+  </div>
+ </div>
+
+ <!-- PENGATURAN MUSTAHIK -->
+ <div class="card">
+  <h3>👥 Pengaturan Golongan Mustahik</h3>
+  <label class="field-label">Nama Golongan</label>
+  <input id="golonganNama" placeholder="Contoh: Fakir">
+  <label class="field-label">Persentase Bagian (%)</label>
+  <input id="golonganPersen" type="number" min="0.01" max="100" step="0.01" placeholder="Contoh: 40">
+  <label class="field-label">Nama Penerima</label>
+  <textarea id="golonganAnggota" placeholder="Ahmad&#10;Budi&#10;Siti&#10;Dina"></textarea>
+  <div class="note">Masukkan satu nama penerima setiap baris. Persentase berlaku untuk total zakat beras dan uang secara terpisah.</div>
+  <button class="btn-full" onclick="simpanGolongan()">+ Simpan Golongan</button>
+  <button class="btn-gray btn-full" onclick="batalEditGolongan()">Batal Edit</button>
+
+  <div class="section-title"><h3>Daftar Golongan</h3><span class="small" id="totalPersen">0%</span></div>
+  <div id="daftarGolongan"></div>
+  <div class="note" id="infoPersen">Total persentase seluruh golongan maksimal 100%.</div>
+ </div>
+
+ <!-- SIMULASI -->
+ <div class="card">
+  <h3>📊 Simulasi Pembagian Otomatis</h3>
+  <div id="simulasiPembagian"><div class="empty">Tambahkan golongan dan nama penerima terlebih dahulu.</div></div>
+  <button class="btn-full" onclick="realisasiPembagian()">✓ Realisasikan Pembagian</button>
+  <div class="note">Realisasi akan membuat catatan pembagian untuk setiap penerima dan mengurangi saldo. Pastikan data golongan sudah benar sebelum menekan tombol.</div>
+ </div>
+
+ <!-- PEMBAGIAN MANUAL -->
+ <div class="card">
+  <h3>Tambah Pembagian Manual</h3>
+  <label class="field-label">Nama Penerima / Mustahik</label>
+  <input id="namaTerima" placeholder="Nama penerima zakat">
+  <label class="field-label">Jenis Zakat</label>
+  <select id="jenisKeluar" onchange="updateSisaPembagian()">
+   <option value="Beras">Beras</option><option value="Uang">Uang</option>
+  </select>
+  <label class="field-label">Jumlah yang Dibagikan</label>
+  <input id="jumlahKeluar" type="number" min="0.01" step="0.01" placeholder="Masukkan jumlah" oninput="updateSisaPembagian()">
+  <div class="note" id="infoSisa">Masukkan jumlah pembagian.</div>
+  <label class="field-label">Keterangan (opsional)</label>
+  <textarea id="ketKeluar" placeholder="Contoh: Fakir, miskin, amil, dan sebagainya."></textarea>
+  <button class="btn-full" onclick="tambahPembagian()">Simpan Pembagian Manual</button>
+ </div>
+
+ <div class="card">
+  <h3>Riwayat Pembagian</h3>
+  <input id="searchKeluar" placeholder="Cari nama penerima..." oninput="renderKeluar()">
+  <div class="table-wrap" style="margin-top:12px"><table>
+   <thead><tr><th>Nama</th><th>Jenis</th><th>Jumlah</th><th>Keterangan</th><th>Aksi</th></tr></thead>
+   <tbody id="tabelKeluar"></tbody>
+  </table></div>
+  <div id="emptyKeluar" class="empty hidden">Belum ada pembagian.</div>
+  <button class="btn-light btn-full" onclick="exportDistribusi()">📥 Export Laporan Pembagian</button>
+ </div>
+
+ <div class="card">
+  <h3>Ringkasan Distribusi</h3>
+  <div class="balance">
+   <div class="balance-item"><label>Total penerima</label><strong id="jumlahPenerima">0</strong></div>
+   <div class="balance-item"><label>Total transaksi</label><strong id="jumlahTransaksi">0</strong></div>
+  </div>
+ </div>
+</section>
+</main>
+
+<nav class="nav">
+ <div class="nav-inner">
+  <button class="active" onclick="pindah('dashboard',this)"><span>⌂</span>Beranda</button>
+  <button onclick="pindah('dataKK',this)"><span>👥</span>Data KK</button>
+  <button onclick="pindah('penerimaan',this)"><span>📥</span>Penerimaan</button>
+  <button onclick="pindah('pembagian',this)"><span>📤</span>Pembagian</button>
+ </div>
+</nav>
+<footer>MASJID NURUL IMAN · APLIKASI ZAKAT FITRAH</footer>
+
+<script>
+// ======================================
+// PENGATURAN DAN PENYIMPANAN
+// ======================================
+
+const NAMA_MASJID="Masjid Nurul Iman";
+const BERAS_PER_JIWA=2.7;
+const HARGA_BERAS_PER_JIWA=40000;
+
+function load(key){
+ try{
+  const d=JSON.parse(localStorage.getItem(key)||"[]");
+  return Array.isArray(d)?d:[];
+ }catch(e){return []}
 }
 
-function togglePanelKK(){ panelKK.classList.toggle("hidden"); }
+let DATA_KK=load("DATA_KK");
+let masuk=load("masuk");
+let keluar=load("keluar");
+let golongan=load("golongan");
+let editGolonganId=null;
 
-function hapusSemuaKK(){
-
-  const konfirmasi1 = confirm(
-    "PERINGATAN!\n\nSemua DATA KK akan dihapus.\nTransaksi juga akan ikut dihapus.\n\nLanjut?"
-  );
-  if(!konfirmasi1) return;
-
-  const konfirmasi2 = confirm(
-    "Konfirmasi sekali lagi.\nData tidak bisa dikembalikan.\n\nYakin?"
-  );
-  if(!konfirmasi2) return;
-
-  // Kosongkan semua
-  DATA_KK = [];
-  masuk = [];
-
-  // Hapus dari storage
-  localStorage.removeItem("DATA_KK");
-  localStorage.removeItem("masuk");
-
-  // Refresh tampilan
-  tampilkanKK();
-  tampilkanRingkasan();
-  tampilkanTabelMasuk();
-
-  alert("Semua data KK dan transaksi berhasil dihapus.");
-}
-
-function tambahKK(){
-  const input = bulkKK.value.trim();
-  if(!input) return alert("Isi data dulu");
-
-  const lines = input.split("\n");
-
-  lines.forEach(line=>{
-    const [nama, jiwa] = line.split(",");
-    if(!nama || !jiwa) return;
-
-    if(!DATA_KK.some(k=>k.nama.toLowerCase()===nama.trim().toLowerCase())){
-      DATA_KK.push({
-        nama: nama.trim(),
-        jiwa: Number(jiwa)
-      });
-    }
-  });
-
-  bulkKK.value="";
-  simpanStorage();
-  tampilkanKK();
-
-
-  if(DATA_KK.some(k=>k.nama.toLowerCase()===nama.toLowerCase()))
-    return alert("Nama KK sudah ada");
-
-  
-}
-
-function tampilkanKK(){
-  tabelKK.innerHTML = "<tr><th>Nama KK</th><th>Jiwa</th><th>Aksi</th></tr>";
-
-  DATA_KK.forEach((k,index)=>{
-    tabelKK.innerHTML += `
-      <tr>
-        <td>${k.nama}</td>
-        <td>${k.jiwa}</td>
-        <td>
-          <button class="danger" onclick="hapusKK(${index})">Hapus</button>
-        </td>
-      </tr>`;
-  });
-}
-
-function cariNama(){
-  const keyword = namaMasuk.value.toLowerCase();
-  suggestions.innerHTML = "";
-
-  if(!keyword) return;
-
-  const hasil = DATA_KK
-    .filter(k => k.nama.toLowerCase().includes(keyword))
-    .slice(0,3); // 🔥 batasi hanya 3
-
-  hasil.forEach(k=>{
-    const div = document.createElement("div");
-    div.className = "suggestion-item";
-    div.textContent = k.nama;
-    div.onclick = function(){
-      namaMasuk.value = k.nama;
-      jiwaMasuk.value = k.jiwa;
-      hitungTotalMasuk();
-      suggestions.innerHTML = "";
-    };
-    suggestions.appendChild(div);
-  });
-}
-
-function isiDropdownNama(){
-  namaMasuk.innerHTML = "<option value=''>Pilih Nama KK</option>";
-  DATA_KK.forEach(k=>{
-    namaMasuk.innerHTML += `<option value='${k.nama}'>${k.nama}</option>`;
-  });
-}
-function cariNamaMirip(inputNama){
-  const keyword = inputNama.toLowerCase();
-
-  return DATA_KK.filter(k=>{
-    const nama = k.nama.toLowerCase();
-    return nama.includes(keyword) || keyword.includes(nama);
-  }).slice(0,3);
-}
-
-function isiJiwaOtomatis(){
-  const data = DATA_KK.find(k=>k.nama===namaMasuk.value);
-  if(data){ jiwaMasuk.value = data.jiwa; hitungTotalMasuk(); }
-}
-
-
-function hitungTotalMasuk(){
-  const jiwa = Number(jiwaMasuk.value||0);
-  if(jenisMasuk.value === "Beras") totalMasuk.value = (jiwa*BERAS_PER_JIWA)+" kg";
-  else totalMasuk.value = "Rp "+(jiwa*HARGA_BERAS_PER_JIWA).toLocaleString();
-}
-
-function tambahMasuk(){
-  const nama = namaMasuk.value.trim();
-  const jiwa = Number(jiwaMasuk.value);
-  const jenis = jenisMasuk.value;
-
-  if(!nama || !jiwa) return alert("Data belum lengkap");
-
-  // 🔥 CEK: Jika nama belum ada di DATA_KK → tambahkan otomatis
-  let dataKK = DATA_KK.find(k=>k.nama.toLowerCase()===nama.toLowerCase());
-
-if(!dataKK){
-
-  const lanjut = confirm("Nama tidak ditemukan.\nTambah sebagai KK baru?");
-  if(!lanjut) return;
-
-  DATA_KK.push({ nama: nama, jiwa: jiwa });
-
-}else{
-
-  if(dataKK.jiwa !== jiwa){
-
-    const update = confirm(
-      "Jumlah jiwa berubah dari "+dataKK.jiwa+" menjadi "+jiwa+".\nUpdate data KK?"
-    );
-
-    if(update){
-      dataKK.jiwa = jiwa; // 🔥 INI WAJIB ADA
-    }
-  }
-}
-
-// WAJIB simpan setelah update
-simpanStorage();
-tampilkanKK();
-
-  // Cegah dobel bayar
-  if(masuk.some(m=>m.nama.toLowerCase()===nama.toLowerCase()))
-    return alert("Sudah tercatat bayar");
-
-  masuk.push({
-  nama,
-  jenis
+// Migrasi data lama dan pemberian ID untuk transaksi lama
+masuk=masuk.map((m,i)=>{
+ const kk=DATA_KK.find(k=>String(k.nama).toLowerCase()===String(m.nama).toLowerCase());
+ const jiwa=Number(m.jiwaSnapshot??(kk?kk.jiwa:0));
+ return {
+  ...m,
+  id:m.id??("masuk-"+i+"-"+Date.now()),
+  jiwaSnapshot:jiwa,
+  nilai:Number(m.nilai??(m.jenis==="Beras"?jiwa*BERAS_PER_JIWA:jiwa*HARGA_BERAS_PER_JIWA))
+ };
 });
 
-  namaMasuk.value="";
-  jiwaMasuk.value="";
-  totalMasuk.value="";
-  suggestions.innerHTML="";
+keluar=keluar.map((m,i)=>({
+ ...m,
+ id:m.id??("keluar-"+i+"-"+Date.now()),
+ jumlah:Number(m.jumlah)||0
+}));
 
-  simpanStorage();
-  tampilkanRingkasan();
+golongan=golongan.map((g,i)=>({
+ ...g,
+ id:g.id??("golongan-"+i+"-"+Date.now()),
+ persen:Number(g.persen)||0,
+ anggota:Array.isArray(g.anggota)?g.anggota:[]
+}));
+
+function simpan(){
+ localStorage.setItem("DATA_KK",JSON.stringify(DATA_KK));
+ localStorage.setItem("masuk",JSON.stringify(masuk));
+ localStorage.setItem("keluar",JSON.stringify(keluar));
+ localStorage.setItem("golongan",JSON.stringify(golongan));
+}
+simpan();
+
+// ======================================
+// NAVIGASI DAN FORMAT
+// ======================================
+
+function pindah(id,btn){
+ document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+ document.getElementById(id).classList.add("active");
+ document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
+ btn.classList.add("active");
+ window.scrollTo({top:0,behavior:"smooth"});
+ renderSemua();
 }
 
-function tampilkanRingkasan(){
+function rupiah(n){
+ return "Rp "+Math.round(Number(n)||0).toLocaleString("id-ID");
+}
+function angka(n){
+ return Number(n||0).toLocaleString("id-ID",{maximumFractionDigits:3});
+}
+function escapeHTML(s){
+ return String(s??"").replace(/[&<>"']/g,c=>({
+  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+ }[c]));
+}
+function formatJumlah(jenis,n){
+ return jenis==="Beras"?angka(n)+" kg":rupiah(n);
+}
 
-  const totalKK = masuk.length;
+// ======================================
+// SALDO
+// ======================================
 
-  let totalJiwa = 0;
-  let totalBeras = 0;
-  let totalUang = 0;
+function saldo(){
+ let berasMasuk=0,uangMasuk=0,berasKeluar=0,uangKeluar=0;
+ masuk.forEach(m=>{
+  if(m.jenis==="Beras")berasMasuk+=Number(m.nilai||0);
+  if(m.jenis==="Uang")uangMasuk+=Number(m.nilai||0);
+ });
+ keluar.forEach(m=>{
+  if(m.jenis==="Beras")berasKeluar+=Number(m.jumlah||0);
+  if(m.jenis==="Uang")uangKeluar+=Number(m.jumlah||0);
+ });
+ return {
+  berasMasuk,uangMasuk,berasKeluar,uangKeluar,
+  berasSisa:berasMasuk-berasKeluar,
+  uangSisa:uangMasuk-uangKeluar
+ };
+}
 
-  masuk.forEach(m=>{
-    const dataKK = DATA_KK.find(k=>k.nama.toLowerCase()===m.nama.toLowerCase());
-    const jiwa = dataKK ? dataKK.jiwa : 0;
+// ======================================
+// DATA KK
+// ======================================
 
-    totalJiwa += jiwa;
+function tambahKK(){
+ const input=document.getElementById("bulkKK").value.trim();
+ if(!input)return alert("Masukkan data KK.");
+ let berhasil=0,gagal=0;
 
-    if(m.jenis==="Beras") totalBeras += jiwa*BERAS_PER_JIWA;
-    if(m.jenis==="Uang") totalUang += jiwa*HARGA_BERAS_PER_JIWA;
+ input.split("\n").forEach(line=>{
+  const parts=line.split(",");
+  const nama=(parts[0]||"").trim();
+  const jiwa=Number((parts[1]||"").trim());
+  if(!nama||!Number.isInteger(jiwa)||jiwa<1){gagal++;return}
+  if(DATA_KK.some(k=>k.nama.toLowerCase()===nama.toLowerCase())){gagal++;return}
+  DATA_KK.push({nama,jiwa});berhasil++;
+ });
+ simpan();
+ document.getElementById("bulkKK").value="";
+ renderSemua();
+ alert("Berhasil: "+berhasil+" KK\nDilewati: "+gagal+" baris.");
+}
+
+function renderKK(){
+ const q=(document.getElementById("searchKK").value||"").toLowerCase();
+ const tbody=document.getElementById("tabelKK");
+ tbody.innerHTML="";
+ const list=DATA_KK.filter(k=>k.nama.toLowerCase().includes(q));
+ document.getElementById("jumlahKK").textContent=DATA_KK.length+" KK";
+ document.getElementById("emptyKK").classList.toggle("hidden",list.length>0);
+
+ list.forEach(k=>{
+  const sudah=masuk.some(m=>m.nama.toLowerCase()===k.nama.toLowerCase());
+  const tr=document.createElement("tr");
+  tr.innerHTML=`
+   <td>${escapeHTML(k.nama)}</td><td>${k.jiwa}</td>
+   <td><span class="badge ${sudah?"":"red"}">${sudah?"Sudah bayar":"Belum bayar"}</span></td>
+   <td>
+    <button class="btn-orange" onclick="editKK('${encodeURIComponent(k.nama)}')">Edit</button>
+    <button class="btn-red" onclick="hapusKK('${encodeURIComponent(k.nama)}')">Hapus</button>
+   </td>`;
+  tbody.appendChild(tr);
+ });
+}
+
+function editKK(encoded){
+ const nama=decodeURIComponent(encoded);
+ const k=DATA_KK.find(x=>x.nama===nama);
+ if(!k)return;
+ const namaBaru=prompt("Nama KK:",k.nama);
+ if(namaBaru===null)return;
+ const jiwaBaru=prompt("Jumlah jiwa:",k.jiwa);
+ if(jiwaBaru===null)return;
+ const j=Number(jiwaBaru);
+ if(!namaBaru.trim()||!Number.isInteger(j)||j<1)return alert("Data tidak valid.");
+ if(DATA_KK.some(x=>x.nama.toLowerCase()===namaBaru.trim().toLowerCase()&&x!==k))
+  return alert("Nama sudah digunakan.");
+ k.nama=namaBaru.trim();k.jiwa=j;
+ simpan();renderSemua();
+}
+
+function hapusKK(encoded){
+ const nama=decodeURIComponent(encoded);
+ if(!confirm("Hapus data KK "+nama+"?"))return;
+ DATA_KK=DATA_KK.filter(k=>k.nama!==nama);
+ simpan();renderSemua();
+}
+
+function hapusSemuaKK(){
+ if(!confirm("Semua data KK, penerimaan, dan pembagian akan dihapus. Lanjutkan?"))return;
+ if(!confirm("Konfirmasi kedua: data tidak dapat dipulihkan."))return;
+ DATA_KK=[];masuk=[];keluar=[];golongan=[];
+ simpan();renderSemua();
+ alert("Seluruh data berhasil dihapus.");
+}
+
+// ======================================
+// PENERIMAAN
+// ======================================
+
+function cariNama(){
+ const q=document.getElementById("namaMasuk").value.toLowerCase();
+ const box=document.getElementById("suggestions");
+ box.innerHTML="";
+ if(!q){box.classList.add("hidden");return}
+ const hasil=DATA_KK.filter(k=>k.nama.toLowerCase().includes(q)).slice(0,5);
+ if(!hasil.length){box.classList.add("hidden");return}
+ hasil.forEach(k=>{
+  const div=document.createElement("div");
+  div.className="suggestion";
+  div.textContent=k.nama+" ("+k.jiwa+" jiwa)";
+  div.onclick=()=>{
+   document.getElementById("namaMasuk").value=k.nama;
+   document.getElementById("jiwaMasuk").value=k.jiwa;
+   box.classList.add("hidden");hitungTotal();
+  };
+  box.appendChild(div);
+ });
+ box.classList.remove("hidden");
+}
+
+function hitungTotal(){
+ const jiwa=Number(document.getElementById("jiwaMasuk").value)||0;
+ const jenis=document.getElementById("jenisMasuk").value;
+ document.getElementById("totalMasuk").value=
+  jenis==="Beras"?angka(jiwa*BERAS_PER_JIWA)+" kg":rupiah(jiwa*HARGA_BERAS_PER_JIWA);
+}
+document.getElementById("jiwaMasuk").addEventListener("input",hitungTotal);
+
+function tambahMasuk(){
+ const nama=document.getElementById("namaMasuk").value.trim();
+ const jiwa=Number(document.getElementById("jiwaMasuk").value);
+ const jenis=document.getElementById("jenisMasuk").value;
+ if(!nama||!Number.isInteger(jiwa)||jiwa<1)return alert("Nama dan jumlah jiwa harus diisi.");
+ if(masuk.some(m=>m.nama.toLowerCase()===nama.toLowerCase()))
+  return alert("Nama ini sudah tercatat membayar.");
+
+ let kk=DATA_KK.find(k=>k.nama.toLowerCase()===nama.toLowerCase());
+ if(!kk){
+  if(!confirm("Nama tidak ada dalam data KK. Tambahkan sebagai KK baru?"))return;
+  kk={nama,jiwa};DATA_KK.push(kk);
+ }else if(kk.jiwa!==jiwa){
+  if(confirm("Jumlah jiwa berubah dari "+kk.jiwa+" menjadi "+jiwa+". Update data KK?"))kk.jiwa=jiwa;
+ }
+
+ const nilai=jenis==="Beras"?jiwa*BERAS_PER_JIWA:jiwa*HARGA_BERAS_PER_JIWA;
+ masuk.push({id:Date.now()+Math.random(),nama,jiwaSnapshot:jiwa,jenis,nilai,tanggal:new Date().toISOString()});
+ simpan();
+ document.getElementById("namaMasuk").value="";
+ document.getElementById("jiwaMasuk").value="";
+ document.getElementById("totalMasuk").value="";
+ document.getElementById("suggestions").classList.add("hidden");
+ renderSemua();alert("Penerimaan berhasil disimpan.");
+}
+
+function renderMasuk(){
+ const q=(document.getElementById("searchMasuk").value||"").toLowerCase();
+ const tbody=document.getElementById("tabelMasuk");tbody.innerHTML="";
+ const list=masuk.filter(m=>m.nama.toLowerCase().includes(q));
+ document.getElementById("emptyMasuk").classList.toggle("hidden",list.length>0);
+ list.forEach(m=>{
+  const tr=document.createElement("tr");
+  tr.innerHTML=`
+   <td>${escapeHTML(m.nama)}</td><td>${m.jiwaSnapshot}</td>
+   <td>${m.jenis}</td><td>${formatJumlah(m.jenis,m.nilai)}</td>
+   <td><button class="btn-red" onclick="hapusMasuk('${m.id}')">Hapus</button></td>`;
+  tbody.appendChild(tr);
+ });
+}
+
+function hapusMasuk(id){
+ if(!confirm("Hapus transaksi penerimaan ini?"))return;
+ masuk=masuk.filter(m=>String(m.id)!==String(id));
+ simpan();renderSemua();
+}
+function lihatBelum(){
+ const belum=DATA_KK.filter(k=>!masuk.some(m=>m.nama.toLowerCase()===k.nama.toLowerCase()));
+ alert(belum.map(k=>k.nama+" ("+k.jiwa+" jiwa)").join("\n")||"Semua KK sudah membayar.");
+}
+function resetPenerimaan(){
+ if(!confirm("Hapus seluruh transaksi penerimaan? Saldo akan berubah. Data KK tetap aman."))return;
+ masuk=[];simpan();renderSemua();
+}
+
+// ======================================
+// GOLONGAN MUSTAHIK
+// ======================================
+
+function totalPersentase(){
+ return golongan.reduce((a,g)=>a+Number(g.persen||0),0);
+}
+
+function simpanGolongan(){
+ const nama=document.getElementById("golonganNama").value.trim();
+ const persen=Number(document.getElementById("golonganPersen").value);
+ const anggota=document.getElementById("golonganAnggota").value
+  .split("\n").map(n=>n.trim()).filter(Boolean);
+
+ if(!nama)return alert("Nama golongan harus diisi.");
+ if(!Number.isFinite(persen)||persen<=0||persen>100)
+  return alert("Persentase harus lebih dari 0 dan maksimal 100%.");
+ if(!anggota.length)return alert("Masukkan minimal satu nama penerima.");
+
+ const duplikat=golongan.some(g=>
+  g.nama.toLowerCase()===nama.toLowerCase()&&String(g.id)!==String(editGolonganId)
+ );
+ if(duplikat)return alert("Nama golongan sudah ada.");
+
+ const lama=golongan.find(g=>String(g.id)===String(editGolonganId));
+ const totalBaru=totalPersentase()-(lama?Number(lama.persen):0)+persen;
+ if(totalBaru>100.000001)
+  return alert("Total persentase tidak boleh melebihi 100%.\nTotal jika disimpan: "+angka(totalBaru)+"%");
+
+ if(lama){
+  lama.nama=nama;lama.persen=persen;lama.anggota=anggota;
+ }else{
+  golongan.push({id:Date.now()+Math.random(),nama,persen,anggota});
+ }
+
+ simpan();batalEditGolongan();renderGolongan();
+ alert("Golongan mustahik berhasil disimpan.");
+}
+
+function editDataGolongan(id){
+ const g=golongan.find(x=>String(x.id)===String(id));
+ if(!g)return;
+ editGolonganId=g.id;
+ document.getElementById("golonganNama").value=g.nama;
+ document.getElementById("golonganPersen").value=g.persen;
+ document.getElementById("golonganAnggota").value=g.anggota.join("\n");
+ document.getElementById("golonganNama").scrollIntoView({behavior:"smooth",block:"center"});
+}
+
+function batalEditGolongan(){
+ editGolonganId=null;
+ document.getElementById("golonganNama").value="";
+ document.getElementById("golonganPersen").value="";
+ document.getElementById("golonganAnggota").value="";
+}
+
+function hapusGolongan(id){
+ const g=golongan.find(x=>String(x.id)===String(id));
+ if(!g)return;
+ if(!confirm("Hapus golongan "+g.nama+"?"))return;
+ golongan=golongan.filter(x=>String(x.id)!==String(id));
+ simpan();renderGolongan();
+}
+
+function renderGolongan(){
+ const box=document.getElementById("daftarGolongan");
+ box.innerHTML="";
+ const total=totalPersentase();
+ document.getElementById("totalPersen").textContent=angka(total)+"% terpakai";
+ document.getElementById("infoPersen").textContent=
+  "Persentase terpakai: "+angka(total)+"%. Sisa persentase: "+angka(Math.max(0,100-total))+"%.";
+
+ if(!golongan.length){
+  box.innerHTML='<div class="empty">Belum ada golongan mustahik.</div>';
+ }else{
+  golongan.forEach(g=>{
+   const div=document.createElement("div");
+   div.className="mustahik-item";
+   div.innerHTML=`
+    <div class="mustahik-head">
+     <strong>${escapeHTML(g.nama)} · ${angka(g.persen)}%</strong>
+     <span class="badge">${g.anggota.length} orang</span>
+    </div>
+    <div class="mustahik-detail">${g.anggota.map(escapeHTML).join("<br>")}</div>
+    <div class="btn-row">
+     <button class="btn-orange" onclick="editDataGolongan('${g.id}')">Edit</button>
+     <button class="btn-red" onclick="hapusGolongan('${g.id}')">Hapus</button>
+    </div>`;
+   box.appendChild(div);
   });
-
-  ringkasan.textContent =
-    `${NAMA_MASJID}\n\n`+
-    `KK Bayar: ${totalKK}\n`+
-    `Total Jiwa: ${totalJiwa}\n`+
-    `Total Beras: ${totalBeras} kg\n`+
-    `Total Uang: Rp ${totalUang.toLocaleString()}`;
+ }
+ renderSimulasi();
 }
 
-function tampilkanTabelMasuk(){
-  tabelMasuk.innerHTML = "<tr><th>Nama</th><th>Jiwa</th><th>Jenis</th><th>Beras</th><th>Uang</th></tr>";
+// ======================================
+// SIMULASI ALOKASI BERAS DAN UANG
+// ======================================
 
-  masuk.forEach(m=>{
+function hitungAlokasi(jenis){
+ const s=saldo();
+ const total=Math.max(0,jenis==="Beras"?s.berasSisa:s.uangSisa);
 
-    const dataKK = DATA_KK.find(k=>k.nama.toLowerCase()===m.nama.toLowerCase());
-    const jiwa = dataKK ? dataKK.jiwa : 0;
+ return golongan.map(g=>{
+  const jatah=total*Number(g.persen)/100;
+  const orang=g.anggota.length;
+  const perOrang=orang?jatah/orang:0;
+  return {golongan:g.nama,persen:g.persen,anggota:g.anggota,jatah,orang,perOrang};
+ });
+}
 
-    const beras = m.jenis==="Beras" ? jiwa*BERAS_PER_JIWA : 0;
-    const uang = m.jenis==="Uang" ? jiwa*HARGA_BERAS_PER_JIWA : 0;
+function renderSimulasi(){
+ const box=document.getElementById("simulasiPembagian");
+ if(!golongan.length){
+  box.innerHTML='<div class="empty">Tambahkan golongan dan nama penerima terlebih dahulu.</div>';
+  return;
+ }
 
-    tabelMasuk.innerHTML += `
-      <tr>
-        <td>${m.nama}</td>
-        <td>${jiwa}</td>
-        <td>${m.jenis}</td>
-        <td>${beras || '-'}</td>
-        <td>${uang ? 'Rp '+uang.toLocaleString() : '-'}</td>
-      </tr>`;
+ const s=saldo();
+ let html="";
+
+ ["Beras","Uang"].forEach(jenis=>{
+  const total=jenis==="Beras"?s.berasSisa:s.uangSisa;
+  html+=`<div class="allocation"><strong>${jenis==="Beras"?"🌾 ZAKAT BERAS":"💵 ZAKAT UANG"}</strong>
+   <div class="allocation-row"><span>Saldo tersedia</span><strong>${formatJumlah(jenis,total)}</strong></div>`;
+
+  hitungAlokasi(jenis).forEach(a=>{
+   html+=`<hr style="border:0;border-top:1px solid #d3e5d8;margin:9px 0">
+    <strong>${escapeHTML(a.golongan)} (${angka(a.persen)}%)</strong>
+    <div class="allocation-row"><span>Jatah golongan</span><strong>${formatJumlah(jenis,a.jatah)}</strong></div>
+    <div class="allocation-row"><span>Jumlah penerima</span><strong>${a.orang} orang</strong></div>
+    <div class="allocation-row"><span>Bagian per orang</span><strong>${formatJumlah(jenis,a.perOrang)}</strong></div>`;
   });
+  html+="</div>";
+ });
+
+ const sisaPersen=Math.max(0,100-totalPersentase());
+ html+=`<div class="note">Persentase yang belum dialokasikan: ${angka(sisaPersen)}%. Bagian ini tetap menjadi saldo dan tidak dibagikan otomatis.</div>`;
+ box.innerHTML=html;
 }
 
-function hapusKK(index){
-
-  const nama = DATA_KK[index].nama;
-
-  // Cek apakah sudah tercatat bayar
-  const sudahBayar = masuk.some(m=>m.nama.toLowerCase()===nama.toLowerCase());
-
-  if(sudahBayar){
-    const lanjut = confirm(
-      "Nama ini sudah tercatat dalam penerimaan.\n\nJika dihapus, data penerimaan tetap ada.\n\nLanjut hapus?"
-    );
-    if(!lanjut) return;
-  } else {
-    if(!confirm("Yakin ingin menghapus KK ini?")) return;
-  }
-
-  DATA_KK.splice(index,1);
-  simpanStorage();
-  tampilkanKK();
-}
-function bukaModalTabel(){ tampilkanTabelMasuk(); modalTabel.style.display='block'; }
-
-function bukaModalBelum(){
-  const sudah = masuk.map(m=>m.nama);
-  const belum = DATA_KK.filter(k=>!sudah.includes(k.nama)).map(k=>k.nama);
-  isiBelum.innerHTML = belum.length? belum.join('<br>') : 'Semua sudah bayar';
-  modalBelum.style.display='block';
+// Membagi angka secara merata. Uang dibulatkan ke rupiah utuh,
+// sedangkan beras dibulatkan sampai 0,001 kg.
+function bagiRata(total,jumlah,jenis){
+ if(jumlah<=0)return [];
+ const unit=jenis==="Uang"?1:1000;
+ const totalUnit=Math.round(total*unit);
+ const dasar=Math.floor(totalUnit/jumlah);
+ const sisa=totalUnit-(dasar*jumlah);
+ return Array.from({length:jumlah},(_,i)=>(dasar+(i<sisa?1:0))/unit);
 }
 
-function tutupModal(id){ document.getElementById(id).style.display='none'; }
+function realisasiPembagian(){
+ if(!golongan.length)return alert("Belum ada golongan mustahik.");
+ if(totalPersentase()>100.000001)return alert("Total persentase melebihi 100%.");
+ if(golongan.some(g=>!g.anggota.length))return alert("Ada golongan yang belum memiliki penerima.");
 
-function resetData(){
-  if(!confirm("Yakin reset data penerimaan saja?")) return;
+ const s=saldo();
+ if(s.berasSisa<0||s.uangSisa<0)return alert("Saldo zakat negatif. Periksa kembali riwayat pembagian.");
 
-  // Hapus hanya data penerimaan
-  masuk = [];
-  localStorage.removeItem("masuk");
+ if(s.berasSisa<=0&&s.uangSisa<=0)
+  return alert("Belum ada saldo zakat yang bisa dibagikan.");
 
-  // Reset tampilan
-  tampilkanRingkasan();
-  tampilkanTabelMasuk();
+ let daftar=[];
+ ["Beras","Uang"].forEach(jenis=>{
+  const total=jenis==="Beras"?s.berasSisa:s.uangSisa;
+  if(total<=0)return;
 
-  alert("Data penerimaan berhasil direset.\nData KK tetap aman.");
+  golongan.forEach(g=>{
+   const jatah=total*Number(g.persen)/100;
+   const bagian=bagiRata(jatah,g.anggota.length,jenis);
+
+   g.anggota.forEach((nama,i)=>{
+    if(bagian[i]>0){
+     daftar.push({
+      nama,jenis,jumlah:bagian[i],
+      ket:"Pembagian otomatis - "+g.nama+" ("+angka(g.persen)+"%)",
+      tanggal:new Date().toISOString(),
+      id:Date.now()+Math.random()
+     });
+    }
+   });
+  });
+ });
+
+ if(!daftar.length)return alert("Tidak ada bagian yang dapat direalisasikan.");
+
+ const ringkasan=daftar.slice(0,12).map(x=>
+  x.nama+" — "+formatJumlah(x.jenis,x.jumlah)
+ ).join("\n");
+
+ const lanjut=confirm(
+  "Aplikasi akan mencatat "+daftar.length+" transaksi pembagian.\n\n"+
+  "Contoh rincian:\n"+ringkasan+
+  (daftar.length>12?"\n...dan penerima lainnya.":"")+
+  "\n\nLanjutkan realisasi?"
+ );
+ if(!lanjut)return;
+
+ keluar.push(...daftar);
+ simpan();renderSemua();
+ alert("Pembagian berhasil direalisasikan!\n"+daftar.length+" catatan penerima telah dibuat.");
 }
-  
-document.getElementById('btnSimpan').addEventListener('click', tambahMasuk);
-document.getElementById('btnTabel').addEventListener('click', bukaModalTabel);
-document.getElementById('btnBelum').addEventListener('click', bukaModalBelum);
+
+// ======================================
+// PEMBAGIAN MANUAL
+// ======================================
+
+function updateSisaPembagian(){
+ const s=saldo();
+ const jenis=document.getElementById("jenisKeluar").value;
+ const jumlah=Number(document.getElementById("jumlahKeluar").value)||0;
+ const tersedia=jenis==="Beras"?s.berasSisa:s.uangSisa;
+ const sisa=tersedia-jumlah;
+ document.getElementById("infoSisa").textContent=
+  "Saldo tersedia: "+formatJumlah(jenis,tersedia)+
+  ". Setelah pembagian: "+formatJumlah(jenis,sisa);
+}
+
+function tambahPembagian(){
+ const nama=document.getElementById("namaTerima").value.trim();
+ const jenis=document.getElementById("jenisKeluar").value;
+ const jumlah=Number(document.getElementById("jumlahKeluar").value);
+ const ket=document.getElementById("ketKeluar").value.trim();
+
+ if(!nama||!Number.isFinite(jumlah)||jumlah<=0)
+  return alert("Nama dan jumlah pembagian harus diisi.");
+
+ const s=saldo();
+ const tersedia=jenis==="Beras"?s.berasSisa:s.uangSisa;
+ if(jumlah>tersedia+0.000001)
+  return alert("Saldo tidak mencukupi!\nSaldo tersedia: "+formatJumlah(jenis,tersedia));
+
+ if(!confirm("Simpan pembagian kepada "+nama+" sebesar "+formatJumlah(jenis,jumlah)+"?"))return;
+
+ keluar.push({
+  id:Date.now()+Math.random(),nama,jenis,jumlah,ket,
+  tanggal:new Date().toISOString()
+ });
+ simpan();
+ document.getElementById("namaTerima").value="";
+ document.getElementById("jumlahKeluar").value="";
+ document.getElementById("ketKeluar").value="";
+ renderSemua();alert("Pembagian berhasil dicatat.");
+}
+
+function renderKeluar(){
+ const q=(document.getElementById("searchKeluar").value||"").toLowerCase();
+ const tbody=document.getElementById("tabelKeluar");tbody.innerHTML="";
+ const list=keluar.filter(m=>m.nama.toLowerCase().includes(q));
+ document.getElementById("emptyKeluar").classList.toggle("hidden",list.length>0);
+
+ list.forEach(m=>{
+  const tr=document.createElement("tr");
+  tr.innerHTML=`
+   <td>${escapeHTML(m.nama)}</td><td>${m.jenis}</td>
+   <td>${formatJumlah(m.jenis,m.jumlah)}</td>
+   <td>${escapeHTML(m.ket||"-")}</td>
+   <td><button class="btn-red" onclick="hapusKeluar('${m.id}')">Hapus</button></td>`;
+  tbody.appendChild(tr);
+ });
+}
+
+function hapusKeluar(id){
+ if(!confirm("Hapus catatan pembagian? Saldo akan dikembalikan."))return;
+ keluar=keluar.filter(m=>String(m.id)!==String(id));
+ simpan();renderSemua();
+}
+
+// ======================================
+// DASHBOARD
+// ======================================
+
+function renderDashboard(){
+ const s=saldo();
+ const totalJiwa=masuk.reduce((a,m)=>a+Number(m.jiwaSnapshot||0),0);
+ const belum=DATA_KK.filter(k=>!masuk.some(m=>m.nama.toLowerCase()===k.nama.toLowerCase())).length;
+
+ document.getElementById("dKK").textContent=DATA_KK.length;
+ document.getElementById("dBayar").textContent=masuk.length;
+ document.getElementById("dJiwa").textContent=totalJiwa;
+ document.getElementById("dBelum").textContent=belum;
+
+ document.getElementById("berasMasuk").textContent=angka(s.berasMasuk)+" kg";
+ document.getElementById("berasKeluar").textContent=angka(s.berasKeluar)+" kg";
+ document.getElementById("berasSisa").textContent=angka(s.berasSisa)+" kg";
+ document.getElementById("uangMasuk").textContent=rupiah(s.uangMasuk);
+ document.getElementById("uangKeluar").textContent=rupiah(s.uangKeluar);
+ document.getElementById("uangSisa").textContent=rupiah(s.uangSisa);
+
+ document.getElementById("saldoBerasBagikan").textContent=angka(s.berasSisa)+" kg";
+ document.getElementById("saldoUangBagikan").textContent=rupiah(s.uangSisa);
+
+ const persen=DATA_KK.length?Math.round(masuk.length/DATA_KK.length*100):0;
+ document.getElementById("persen").textContent=persen+"%";
+ document.getElementById("progressBayar").style.width=Math.min(100,persen)+"%";
+ document.getElementById("jumlahPenerima").textContent=new Set(keluar.map(m=>m.nama.toLowerCase())).size;
+ document.getElementById("jumlahTransaksi").textContent=keluar.length;
+}
+
+// ======================================
+// EXPORT EXCEL
+// ======================================
 
 function exportExcel(){
+ if(!window.XLSX)return alert("Library Excel belum tersedia. Periksa internet.");
+ const wb=XLSX.utils.book_new();
 
-  if(DATA_KK.length === 0){
-    alert("Tidak ada data untuk diexport.");
-    return;
-  }
+ const wsKK=XLSX.utils.json_to_sheet(DATA_KK.map(k=>({"Nama KK":k.nama,"Jumlah Jiwa":k.jiwa})));
+ const wsMasuk=XLSX.utils.json_to_sheet(masuk.map(m=>({
+  "Nama":m.nama,"Jiwa":m.jiwaSnapshot,"Jenis":m.jenis,"Jumlah":m.nilai,"Tanggal":m.tanggal
+ })));
+ const wsKeluar=XLSX.utils.json_to_sheet(keluar.map(m=>({
+  "Penerima":m.nama,"Jenis":m.jenis,"Jumlah":m.jumlah,"Keterangan":m.ket,"Tanggal":m.tanggal
+ })));
+ const wsGolongan=XLSX.utils.json_to_sheet(golongan.map(g=>({
+  "Golongan":g.nama,"Persentase":g.persen,
+  "Jumlah Penerima":g.anggota.length,"Nama Penerima":g.anggota.join(", ")
+ })));
+ const s=saldo();
+ const wsSaldo=XLSX.utils.json_to_sheet([
+  {"Jenis":"Beras","Diterima":s.berasMasuk,"Dibagikan":s.berasKeluar,"Sisa":s.berasSisa,"Satuan":"kg"},
+  {"Jenis":"Uang","Diterima":s.uangMasuk,"Dibagikan":s.uangKeluar,"Sisa":s.uangSisa,"Satuan":"rupiah"}
+ ]);
 
-  // Sheet 1: DATA KK
-  const sheetKK = DATA_KK.map(k => ({
-    "Nama KK": k.nama,
-    "Jumlah Jiwa": k.jiwa
-  }));
-
-  // Sheet 2: DATA PENERIMAAN (dinamis fleksibel)
-  const sheetMasuk = masuk.map(m => {
-
-    const dataKK = DATA_KK.find(k=>k.nama.toLowerCase()===m.nama.toLowerCase());
-    const jiwa = dataKK ? dataKK.jiwa : 0;
-
-    return {
-      "Nama": m.nama,
-      "Jenis": m.jenis,
-      "Jumlah Jiwa": jiwa,
-      "Total Beras (kg)": m.jenis==="Beras" ? jiwa*BERAS_PER_JIWA : "",
-      "Total Uang": m.jenis==="Uang" ? jiwa*HARGA_BERAS_PER_JIWA : ""
-    };
-  });
-
-  // Buat workbook
-  const wb = XLSX.utils.book_new();
-
-  const ws1 = XLSX.utils.json_to_sheet(sheetKK);
-  const ws2 = XLSX.utils.json_to_sheet(sheetMasuk);
-
-  XLSX.utils.book_append_sheet(wb, ws1, "Data_KK");
-  XLSX.utils.book_append_sheet(wb, ws2, "Penerimaan");
-
-  XLSX.writeFile(wb, "Data_Zakat.xlsx");
+ XLSX.utils.book_append_sheet(wb,wsKK,"Data KK");
+ XLSX.utils.book_append_sheet(wb,wsMasuk,"Penerimaan");
+ XLSX.utils.book_append_sheet(wb,wsKeluar,"Pembagian");
+ XLSX.utils.book_append_sheet(wb,wsGolongan,"Golongan Mustahik");
+ XLSX.utils.book_append_sheet(wb,wsSaldo,"Saldo");
+ XLSX.writeFile(wb,"Laporan_Zakat_Fitrah.xlsx");
 }
-tampilkanKK();
-isiDropdownNama();
-tampilkanRingkasan();
+
+function exportDistribusi(){
+ if(!keluar.length)return alert("Belum ada data pembagian.");
+ if(!window.XLSX)return alert("Library Excel belum tersedia.");
+ const data=keluar.map(m=>({
+  "Penerima":m.nama,"Jenis Zakat":m.jenis,"Jumlah":m.jumlah,
+  "Keterangan":m.ket,"Tanggal":m.tanggal
+ }));
+ const wb=XLSX.utils.book_new();
+ const ws=XLSX.utils.json_to_sheet(data);
+ XLSX.utils.book_append_sheet(wb,ws,"Distribusi");
+ XLSX.writeFile(wb,"Laporan_Pembagian_Zakat.xlsx");
+}
+
+// ======================================
+// EXPORT PDF
+// ======================================
 
 async function exportPDF(){
+ if(!masuk.length&&!keluar.length)return alert("Belum ada data laporan.");
+ if(!window.jspdf)return alert("Library PDF belum tersedia.");
+ const {jsPDF}=window.jspdf;
+ const doc=new jsPDF();
+ const tanggal=new Date().toLocaleDateString("id-ID");
+ const s=saldo();
 
-  if(masuk.length===0){
-    alert("Belum ada data");
-    return;
-  }
+ doc.setFontSize(15);
+ doc.text("PANITIA ZAKAT FITRAH",105,13,{align:"center"});
+ doc.setFontSize(12);
+ doc.text(NAMA_MASJID,105,20,{align:"center"});
+ doc.setFontSize(10);
+ doc.text("Laporan Penerimaan dan Pembagian Zakat",105,27,{align:"center"});
+ doc.line(10,31,200,31);
+ doc.text("Tanggal: "+tanggal,10,39);
+ doc.text("KK terdaftar: "+DATA_KK.length,10,46);
+ doc.text("KK membayar: "+masuk.length,10,52);
+ doc.setFontSize(11);
+ doc.text("SALDO ZAKAT",10,63);
 
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
+ doc.autoTable({
+  startY:67,
+  head:[["Jenis","Diterima","Dibagikan","Sisa"]],
+  body:[
+   ["Beras",angka(s.berasMasuk)+" kg",angka(s.berasKeluar)+" kg",angka(s.berasSisa)+" kg"],
+   ["Uang",rupiah(s.uangMasuk),rupiah(s.uangKeluar),rupiah(s.uangSisa)]
+  ],
+  styles:{fontSize:9}
+ });
 
-  const tanggal = new Date().toLocaleDateString("id-ID");
+ let y=doc.lastAutoTable.finalY+12;
+ doc.text("DAFTAR PENERIMAAN",10,y);
+ doc.autoTable({
+  startY:y+4,
+  head:[["No","Nama KK","Jiwa","Jenis","Jumlah"]],
+  body:masuk.map((m,i)=>[
+   i+1,m.nama,m.jiwaSnapshot,m.jenis,formatJumlah(m.jenis,m.nilai)
+  ]),
+  styles:{fontSize:8}
+ });
 
-  let totalJiwa=0;
-  let totalBeras=0;
-  let totalUang=0;
-
-  const rows=[];
-
-  masuk.forEach((m,i)=>{
-
-    const dataKK = DATA_KK.find(
-      k=>k.nama.toLowerCase()===m.nama.toLowerCase()
-    );
-
-    const jiwa = dataKK ? dataKK.jiwa : 0;
-
-    let beras="";
-    let uang="";
-
-    totalJiwa+=jiwa;
-
-    if(m.jenis==="Beras"){
-      beras = jiwa*BERAS_PER_JIWA;
-      totalBeras+=beras;
-    }
-
-    if(m.jenis==="Uang"){
-      uang = jiwa*HARGA_BERAS_PER_JIWA;
-      totalUang+=uang;
-    }
-
-    rows.push([
-      i+1,
-      m.nama,
-      jiwa,
-      m.jenis,
-      beras,
-      uang
-    ]);
-
-  });
-
-  // =====================
-  // KOP SURAT
-  // =====================
-
-  doc.setFontSize(14);
-  doc.text("PANITIA ZAKAT FITRAH",105,10,null,null,"center");
-
-  doc.setFontSize(12);
-  doc.text(NAMA_MASJID,105,16,null,null,"center");
-
-  doc.setFontSize(10);
-  doc.text("Laporan Penerimaan Zakat Fitrah",105,22,null,null,"center");
-
-  doc.line(10,26,200,26);
-
-  // =====================
-  // RINGKASAN
-  // =====================
-
-  doc.text("Tanggal : "+tanggal,10,34);
-
-  doc.text("Jumlah KK : "+masuk.length,10,42);
-  doc.text("Jumlah Jiwa : "+totalJiwa,10,48);
-  doc.text("Total Beras : "+totalBeras+" kg",10,54);
-  doc.text("Total Uang : Rp "+totalUang.toLocaleString(),10,60);
-
-  // =====================
-  // TABEL
-  // =====================
-
-  doc.autoTable({
-
-    startY:66,
-
-    head:[[
-      "No",
-      "Nama",
-      "Jiwa",
-      "Jenis",
-      "Beras (kg)",
-      "Uang"
-    ]],
-
-    body:rows,
-
-    styles:{
-      fontSize:9,
-      halign:"center"
-    },
-
-    headStyles:{
-      fillColor:[0,0,0]
-    },
-
-    didDrawPage:function(data){
-
-      let pageHeight = doc.internal.pageSize.height;
-
-      doc.setFontSize(8);
-
-      doc.text(
-        "Panitia Zakat Fitrah - "+NAMA_MASJID,
-        14,
-        pageHeight-8
-      );
-
-    }
-
-  });
-
-  // =====================
-  // TANDA TANGAN
-  // =====================
-
-  let y = doc.lastAutoTable.finalY + 20;
-
-  if(y > 240){
-    doc.addPage();
-    y = 20;
-  }
-
-  doc.setFontSize(11);
-
-  doc.text("Mengetahui,",20,y);
-  doc.text("Ketua Panitia",20,y+6);
-
-  doc.text("Bendahara",90,y+6);
-
-  doc.text("Petugas",150,y+6);
-
-  doc.text("(_________________)",20,y+30);
-  doc.text("(_________________)",90,y+30);
-  doc.text("(_________________)",150,y+30);
-
-  doc.save("Laporan_Zakat_Fitrah.pdf");
-
+ y=doc.lastAutoTable.finalY+12;
+ if(y>250){doc.addPage();y=20;}
+ doc.text("DAFTAR PEMBAGIAN",10,y);
+ doc.autoTable({
+  startY:y+4,
+  head:[["No","Penerima","Jenis","Jumlah","Keterangan"]],
+  body:keluar.map((m,i)=>[
+   i+1,m.nama,m.jenis,formatJumlah(m.jenis,m.jumlah),m.ket||"-"
+  ]),
+  styles:{fontSize:8}
+ });
+ doc.save("Laporan_Zakat_Fitrah.pdf");
 }
-</script></body>
+
+// ======================================
+// REFRESH SEMUA TAMPILAN
+// ======================================
+
+function renderSemua(){
+ renderKK();
+ renderMasuk();
+ renderKeluar();
+ renderDashboard();
+ renderGolongan();
+ updateSisaPembagian();
+}
+renderSemua();
+</script>
+</body>
 </html>
